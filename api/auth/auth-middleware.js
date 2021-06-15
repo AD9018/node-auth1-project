@@ -1,3 +1,6 @@
+const User = require('../users/users-model')
+
+
 /*
   If the user does not have a session saved in the server
 
@@ -25,15 +28,23 @@ if(!req.session.user){
     "message": "Username taken"
   }
 */
-function checkUsernameFree(req, res, next) {
- const username = req.body.username
- if(username||username.trim()){
-next({status:422, message:"Username taken"})
- }else{
-next()
+async function checkUsernameFree(req, res, next) {
+  const username = req.body.username
+ const dbUserName = await User.findBy({username: username})
+ try{
+if(!dbUserName.length){
+  next()
+}else{
+  next({status:422, 
+    message:"Username taken"})
+}
+ }catch(err){
+  next(err)
  }
 }
-
+ 
+ 
+ 
 /*
   If the username in req.body does NOT exist in the database
 
@@ -43,16 +54,23 @@ next()
   }
 */
 async function checkUsernameExists(req, res, next) {
-  const username = req.body.username
-  if(!username||!username.trim()){
-   next({status:401, message:"Invalid credentials"})
-  }else{
-    next()
-  }
+const username = req.body.username
+ try{
+   const user = await User.findBy({username})
+if(!user.length){
+  next({status:401,message:"Invalid credentials"})
+}else{
+  req.user = user[0]
+  next()
+}
+ }catch(err){
+   next(err)
+ }
 }
 
+
 /*
-  If password is missing from req.body, or if it's 3 chars or shorter
+If password is missing from req.body, or if it's 3 chars or shorter
 
   status 422
   {
